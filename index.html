@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squeek Live — Community Dashboard</title>
+<meta name="squeekchain-project" content="433b2f69-b9e3-4dab-9f18-838f3cee38a6">
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --muted:#8b949e; --acc:#58a6ff; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--txt); font:15px/1.5 system-ui,-apple-system,sans-serif; padding:32px 20px; }
+  .wrap { max-width:920px; margin:0 auto; }
+  h1 { font-size:24px; margin-bottom:4px; }
+  .sub { color:var(--muted); margin-bottom:24px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card .k { font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+  .card .v { font-size:22px; font-weight:650; margin-top:4px; color:var(--acc); }
+  .card .v.dim { color:var(--txt); }
+  .fmt { font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); white-space:pre-wrap; }
+  .err { color:#f85149; }
+  .foot { margin-top:24px; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🐹 Squeek Live</h1>
+  <div class="sub">Community dashboard — reads live public Squeekchain APIs. Not an official product.</div>
+  <div class="grid" id="cards">
+    <div class="card"><div class="k">Wheel</div><div class="v dim" id="wheel">—</div></div>
+    <div class="card"><div class="k">RPM</div><div class="v dim" id="rpm">—</div></div>
+    <div class="card"><div class="k">Block Height</div><div class="v dim" id="block">—</div></div>
+    <div class="card"><div class="k">SQK Supply</div><div class="v dim" id="supply">—</div></div>
+    <div class="card"><div class="k">Cumulative Work</div><div class="v dim" id="work">—</div></div>
+    <div class="card"><div class="k">Settled Through Round</div><div class="v dim" id="round">—</div></div>
+  </div>
+  <div class="card"><div class="k">Raw telemetry</div><pre class="fmt" id="raw">loading…</pre></div>
+  <div class="foot">Refreshes every 60s while visible · data from api.squeekchain.com · not investment advice</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+async function j(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function refresh(){
+  try{
+    const st=await j('https://api.squeekchain.com/v1/status');
+    const ms=st.measurement||{}; const b=st.builder?.projected||{};
+    $('wheel').textContent=(ms.coreStatus||'?');
+    $('rpm').textContent=(ms.rpmMilli!=null?(ms.rpmMilli/1000):'?');
+    $('block').textContent=(b.blockHeight||'?');
+    try{
+      const ec=await j('https://api.squeekchain.com/v1/economy/state');
+      const sup=ec.token?.supply?.mintedBaseUnits;
+      $('supply').textContent=sup!=null?(Number(sup)/1e18).toLocaleString():'?';
+    }catch(e){ $('supply').textContent='n/a'; }
+    $('work').textContent=(b.cumulativeWork||'?');
+    $('round').textContent=(b.settledThroughRound||'?');
+    $('raw').textContent=JSON.stringify({status:st.coreStatus,measurement:ms,projected:b},null,1);
+    $('raw').className='fmt';
+  }catch(err){
+    $('raw').textContent='Error: '+err.message; $('raw').className='fmt err';
+  }
+}
+refresh(); setInterval(refresh,60000);
+</script>
+</body>
+</html>
